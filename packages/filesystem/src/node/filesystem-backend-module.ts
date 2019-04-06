@@ -14,13 +14,11 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import * as cluster from 'cluster';
 import { ContainerModule, interfaces } from 'inversify';
 import { ConnectionHandler, JsonRpcConnectionHandler, ILogger } from '@theia/core/lib/common';
 import { FileSystemNode } from './node-filesystem';
 import { FileSystem, FileSystemClient, fileSystemPath, DispatchingFileSystemClient } from '../common';
 import { FileSystemWatcherServer, FileSystemWatcherClient, fileSystemWatcherPath } from '../common/filesystem-watcher-protocol';
-import { FileSystemWatcherServerClient } from './filesystem-watcher-client';
 import { NsfwFileSystemWatcherServer } from './nsfw-watcher/nsfw-filesystem-watcher';
 
 export function bindFileSystem(bind: interfaces.Bind, props?: {
@@ -36,18 +34,13 @@ export function bindFileSystem(bind: interfaces.Bind, props?: {
 }
 
 export function bindFileSystemWatcherServer(bind: interfaces.Bind): void {
-    if (cluster.isMaster) {
-        bind(FileSystemWatcherServer).toDynamicValue(ctx => {
-            const logger = ctx.container.get<ILogger>(ILogger);
-            return new NsfwFileSystemWatcherServer({
-                info: (message, ...args) => logger.info(message, ...args),
-                error: (message, ...args) => logger.error(message, ...args)
-            });
+    bind(FileSystemWatcherServer).toDynamicValue(ctx => {
+        const logger = ctx.container.get<ILogger>(ILogger);
+        return new NsfwFileSystemWatcherServer({
+            info: (message, ...args) => logger.info(message, ...args),
+            error: (message, ...args) => logger.error(message, ...args)
         });
-    } else {
-        bind(FileSystemWatcherServerClient).toSelf();
-        bind(FileSystemWatcherServer).toService(FileSystemWatcherServerClient);
-    }
+    });
 }
 
 export default new ContainerModule(bind => {

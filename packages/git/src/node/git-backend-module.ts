@@ -14,7 +14,6 @@
  * SPDX-License-Identifier: EPL-2.0 OR GPL-2.0 WITH Classpath-exception-2.0
  ********************************************************************************/
 
-import * as cluster from 'cluster';
 import { ContainerModule, Container, interfaces } from 'inversify';
 import { Git, GitPath } from '../common/git';
 import { GitWatcherPath, GitWatcherClient, GitWatcherServer } from '../common/git-watcher';
@@ -24,7 +23,6 @@ import { ConnectionHandler, JsonRpcConnectionHandler, ILogger } from '@theia/cor
 import { GitRepositoryManager } from './git-repository-manager';
 import { GitRepositoryWatcherFactory, GitRepositoryWatcherOptions, GitRepositoryWatcher } from './git-repository-watcher';
 import { GitLocator } from './git-locator/git-locator-protocol';
-import { GitLocatorClient } from './git-locator/git-locator-client';
 import { GitLocatorImpl } from './git-locator/git-locator-impl';
 import { GitExecProvider } from './git-exec-provider';
 import { GitPromptServer, GitPromptClient, GitPrompt } from '../common/git-prompt';
@@ -53,17 +51,13 @@ export function bindGit(bind: interfaces.Bind, bindingOptions: GitBindingOptions
         child.bind(GitRepositoryWatcherOptions).toConstantValue(options);
         return child.get(GitRepositoryWatcher);
     });
-    if (cluster.isMaster) {
-        bind(GitLocator).toDynamicValue(ctx => {
-            const logger = ctx.container.get<ILogger>(ILogger);
-            return new GitLocatorImpl({
-                info: (message, ...args) => logger.info(message, ...args),
-                error: (message, ...args) => logger.error(message, ...args)
-            });
+    bind(GitLocator).toDynamicValue(ctx => {
+        const logger = ctx.container.get<ILogger>(ILogger);
+        return new GitLocatorImpl({
+            info: (message, ...args) => logger.info(message, ...args),
+            error: (message, ...args) => logger.error(message, ...args)
         });
-    } else {
-        bind(GitLocator).to(GitLocatorClient);
-    }
+    });
     bind(OutputParser).toSelf().inSingletonScope();
     bind(NameStatusParser).toSelf().inSingletonScope();
     bind(CommitDetailsParser).toSelf().inSingletonScope();
